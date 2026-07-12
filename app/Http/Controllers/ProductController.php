@@ -2,80 +2,112 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreProductRequest;
-use App\Http\Requests\UpdateProductRequest;
-use App\Models\Category;
 use App\Models\Product;
-use App\Models\Supplier;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\View\View;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    /**
-     * Display a listing of the products.
-     */
-    public function index(): View
+    // 1. READ ALL (GET /api/products) -> Sudah jalan sebelumnya
+    public function index()
     {
-        $products = Product::with(['category', 'supplier'])->latest()->paginate(10);
-        return view('products.index', compact('products'));
+        $products = Product::with('category')->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data Produk Berhasil Diambil via API',
+            'data' => $products
+        ], 200);
     }
 
-    /**
-     * Show the form for creating a new product.
-     */
-    public function create(): View
+    // 2. CREATE (POST /api/products) -> Solusi Error 405 Anda
+    public function store(Request $request)
     {
-        $categories = Category::all();
-        $suppliers = Supplier::all();
-        return view('products.create', compact('categories', 'suppliers'));
+        $validated = $request->validate([
+            'category_id'   => 'required|exists:categories,id',
+            'supplier_id'   => 'required|integer',
+            'sku'           => 'required|string|unique:products,sku',
+            'name'          => 'required|string|max:255',
+            'stock'         => 'required|integer|min:0',
+            'minimum_stock' => 'required|integer|min:0',
+            'price'         => 'required|numeric|min:0',
+        ]);
+
+        $product = Product::create($validated);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data Produk Berhasil Ditambahkan via API',
+            'data' => $product->load('category')
+        ], 201);
     }
 
-    /**
-     * Store a newly created product in storage.
-     */
-    public function store(StoreProductRequest $request): RedirectResponse
+    // 3. READ SINGLE (GET /api/products/{id})
+    public function show($id)
     {
-        $validated = $request->validated();
-        
-        // If stock is not provided, default to 0
-        $validated['stock'] = $validated['stock'] ?? 0;
+        $product = Product::with('category')->find($id);
 
-        Product::create($validated);
+        if (!$product) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data Produk Tidak Ditemukan'
+            ], 404);
+        }
 
-        return redirect()->route('products.index')
-            ->with('success', 'Produk berhasil ditambahkan.');
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Detail Data Produk Berhasil Diambil via API',
+            'data' => $product
+        ], 200);
     }
 
-    /**
-     * Show the form for editing the specified product.
-     */
-    public function edit(Product $product): View
+    // 4. UPDATE (PUT/PATCH /api/products/{id})
+    public function update(Request $request, $id)
     {
-        $categories = Category::all();
-        $suppliers = Supplier::all();
-        return view('products.edit', compact('product', 'categories', 'suppliers'));
+        $product = Product::find($id);
+
+        if (!$product) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data Produk Tidak Ditemukan'
+            ], 404);
+        }
+
+        // 'sometimes' berarti field tersebut hanya divalidasi jika dikirimkan oleh Postman
+        $validated = $request->validate([
+            'category_id'   => 'sometimes|required|exists:categories,id',
+            'supplier_id'   => 'sometimes|required|integer',
+            'sku'           => 'sometimes|required|string|unique:products,sku,' . $id,
+            'name'          => 'sometimes|required|string|max:255',
+            'stock'         => 'sometimes|required|integer|min:0',
+            'minimum_stock' => 'sometimes|required|integer|min:0',
+            'price'         => 'sometimes|required|numeric|min:0',
+        ]);
+
+        $product->update($validated);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data Produk Berhasil Diubah via API',
+            'data' => $product->load('category')
+        ], 200);
     }
 
-    /**
-     * Update the specified product in storage.
-     */
-    public function update(UpdateProductRequest $request, Product $product): RedirectResponse
+    // 5. DELETE (DELETE /api/products/{id})
+    public function destroy($id)
     {
-        $product->update($request->validated());
+        $product = Product::find($id);
 
-        return redirect()->route('products.index')
-            ->with('success', 'Produk berhasil diperbarui.');
-    }
+        if (!$product) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data Produk Tidak Ditemukan'
+            ], 404);
+        }
 
-    /**
-     * Remove the specified product from storage.
-     */
-    public function destroy(Product $product): RedirectResponse
-    {
         $product->delete();
 
-        return redirect()->route('products.index')
-            ->with('success', 'Produk berhasil dihapus.');
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data Produk Berhasil Dihapus via API'
+        ], 200);
     }
 }

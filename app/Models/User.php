@@ -12,13 +12,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Laravel\Sanctum\HasApiTokens; // <-- 1. Tambahkan import ini
 
 #[Fillable(['name', 'email', 'password', 'role_id', 'supplier_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles; // <-- 2. Sisipkan HasApiTokens di sini
 
     /**
      * Get the attributes that should be cast.
@@ -57,4 +58,3 @@ class User extends Authenticatable
         return $this->hasMany(StockMutation::class);
     }
 }
-
