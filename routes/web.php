@@ -7,9 +7,16 @@ use App\Http\Controllers\StockMutationController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
+
+
 // Redirect root to dashboard (if authenticated, it will show dashboard, else redirect to login)
 Route::get('/', function () {
     return redirect()->route('dashboard');
+});
+
+// Access the KeyGuard landing page
+Route::get('/landing', function () {
+    return view('landing');
 });
 
 // Authentication Routes (Guest)
@@ -54,3 +61,4 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/pdf', [ReportController::class, 'exportPdf'])->name('reports.pdf');
     });
 });
+
